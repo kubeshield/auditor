@@ -17,28 +17,43 @@ limitations under the License.
 package receiver
 
 import (
-	"context"
+	"fmt"
 	"log"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding/format"
 	eventz "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
 )
 
 // PublishEvent sends the events to receiver server
-func PublishEvent(client cloudevents.Client, natsSubject string, op string, obj []byte) error {
+func PublishEvent(nc *nats.Conn, natsSubject string, op string, obj interface{}) error {
 	event := cloudevents.NewEvent()
 	setEventDefaults(&event, natsSubject, op)
-	if err := event.SetData("application/json", obj); err != nil {
+
+	if err := event.SetData(eventz.ApplicationJSON, obj); err != nil {
 		return err
 	}
-	result := client.Send(context.Background(), event)
-	if cloudevents.IsUndelivered(result) {
-		log.Printf("failed to send: %v", result.Error())
-		return result
+
+	data, err := format.JSON.Marshal(&event)
+	if err != nil {
+		return err
 	}
-	log.Printf("Published event `%s` to channel `%s` and acknoledged: %v", op, natsSubject, cloudevents.IsACK(result))
+
+	println("\n\n\n\n")
+	fmt.Println("************", len(data))
+	println("\n\n\n\n")
+
+	//data = []byte("Hi")
+
+	_, err = nc.Request(natsSubject, data, time.Second*5)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Published event `%s` to channel `%s` and acknoledged", op, natsSubject)
 
 	return nil
 }

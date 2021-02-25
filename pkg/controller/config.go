@@ -19,8 +19,10 @@ package controller
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -29,8 +31,6 @@ import (
 	"kmodules.xyz/client-go/discovery"
 	"kmodules.xyz/client-go/tools/clusterid"
 
-	cnats "github.com/cloudevents/sdk-go/protocol/nats/v2"
-	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/nats-io/nats.go"
 	verifier "go.bytebuilders.dev/license-verifier"
 	"go.bytebuilders.dev/license-verifier/info"
@@ -113,29 +113,31 @@ func (c *Config) New() (*AuditorController, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("api response: ", buf.String())
 	var natscred NatsCredential
 	err = json.Unmarshal(buf.Bytes(), &natscred)
 	if err != nil {
 		return nil, err
 	}
 
-	var natsOpts = []nats.Option{nats.Name("Auditor")}
-	if err = ioutil.WriteFile("/tmp/nats.creds", natscred.Credential, 0600); err != nil {
-		return nil, err
-	}
+	fmt.Println("server:", natscred.NatsServer)
+	fmt.Println("subject:", natscred.NatsSubject)
 
-	natsOpts = append(natsOpts, nats.UserCredentials("/tmp/nats.creds"))
-	nc, err := nats.Connect(natscred.NatsServer, natsOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	sender, err := cnats.NewSenderFromConn(nc, natscred.NatsSubject)
-	if err != nil {
-		return nil, err
-	}
-
-	cloudEventsClient, err := cloudevents.NewClient(sender)
+	//var natsOpts = []nats.Option{nats.Name("Auditor")}
+	//if err = ioutil.WriteFile("/tmp/nats.creds", natscred.Credential, 0600); err != nil {
+	//	return nil, err
+	//}
+	//
+	//creds, err := ioutil.ReadFile("/tmp/nats.creds")
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//fmt.Println("Credential from file:\n", string(creds))
+	//
+	//natsOpts = append(natsOpts, nats.UserCredentials("/tmp/nats.creds"))
+	nc, err := NewConnection(natscred)
 	if err != nil {
 		return nil, err
 	}
@@ -148,12 +150,81 @@ func (c *Config) New() (*AuditorController, error) {
 		dynamicInformerFactory: dynamicinformer.NewDynamicSharedInformerFactory(c.DynamicClient, c.ResyncPeriod),
 		recorder:               eventer.NewEventRecorder(c.KubeClient, "auditor"),
 
-		cloudEventsClient: cloudEventsClient,
-		natsSubject:       natscred.NatsSubject,
+		natsClient:  nc,
+		natsSubject: natscred.NatsSubject,
 	}
 
 	if err := ctrl.initWatchers(); err != nil {
 		return nil, err
 	}
 	return ctrl, nil
+}
+
+// NewConnection creates a new NATS connection configured from the Environment
+func NewConnection(natscred NatsCredential) (nc *nats.Conn, err error) {
+	servers := natscred.NatsServer
+
+	opts := []nats.Option{
+		nats.Name("Auditor"),
+		nats.MaxReconnects(-1),
+		nats.ErrorHandler(errorHandler),
+		nats.ReconnectHandler(reconnectHandler),
+		nats.DisconnectErrHandler(disconnectHandler),
+	}
+
+	if err = ioutil.WriteFile("/tmp/nats.creds", natscred.Credential, 0600); err != nil {
+		return nil, err
+	}
+
+	creds, err := ioutil.ReadFile("/tmp/nats.creds")
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("credential:\n", string(creds))
+
+	opts = append(opts, nats.UserCredentials("/tmp/nats.creds"))
+
+	//if os.Getenv("NATS_CERTIFICATE") != "" && os.Getenv("NATS_KEY") != "" {
+	//	opts = append(opts, nats.ClientCert(os.Getenv("NATS_CERTIFICATE"), os.Getenv("NATS_KEY")))
+	//}
+	//
+	//if os.Getenv("NATS_CA") != "" {
+	//	opts = append(opts, nats.RootCAs(os.Getenv("NATS_CA")))
+	//}
+
+	// initial connections can error due to DNS lookups etc, just retry, eventually with backoff
+	for {
+		nc, err := nats.Connect(servers, opts...)
+		if err == nil {
+			return nc, nil
+		}
+
+		log.Printf("could not connect to NATS: %s\n", err)
+
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// called during errors subscriptions etc
+func errorHandler(nc *nats.Conn, s *nats.Subscription, err error) {
+	if s != nil {
+		log.Printf("Error in NATS connection: %s: subscription: %s: %s", nc.ConnectedUrl(), s.Subject, err)
+		return
+	}
+
+	log.Printf("Error in NATS connection: %s: %s", nc.ConnectedUrl(), err)
+}
+
+// called after reconnection
+func reconnectHandler(nc *nats.Conn) {
+	log.Printf("Reconnected to %s", nc.ConnectedUrl())
+}
+
+// called after disconnection
+func disconnectHandler(nc *nats.Conn, err error) {
+	if err != nil {
+		log.Printf("Disconnected from NATS due to error: %v", err)
+	} else {
+		log.Printf("Disconnected from NATS")
+	}
 }

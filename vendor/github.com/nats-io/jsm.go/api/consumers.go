@@ -27,6 +27,7 @@ const (
 	JSApiConsumerInfoT                     = "$JS.API.CONSUMER.INFO.%s.%s"
 	JSApiConsumerDeleteT                   = "$JS.API.CONSUMER.DELETE.%s.%s"
 	JSApiRequestNextT                      = "$JS.API.CONSUMER.MSG.NEXT.%s.%s"
+	JSApiConsumerLeaderStepDownT           = "$JS.API.CONSUMER.LEADER.STEPDOWN.%s.%s"
 	JSMetricConsumerAckPre                 = JSMetricPrefix + ".CONSUMER.ACK"
 	JSAdvisoryConsumerMaxDeliveryExceedPre = JSAdvisoryPrefix + ".CONSUMER.MAX_DELIVERIES"
 )
@@ -77,6 +78,12 @@ type JSApiConsumerListResponse struct {
 	JSApiResponse
 	JSApiIterableResponse
 	Consumers []*ConsumerInfo `json:"consumers"`
+}
+
+// io.nats.jetstream.api.v1.consumer_leader_stepdown_response
+type JSApiConsumerLeaderStepDownResponse struct {
+	JSApiResponse
+	Success bool `json:"success,omitempty"`
 }
 
 type AckPolicy int
@@ -276,6 +283,7 @@ type ConsumerInfo struct {
 	NumRedelivered int            `json:"num_redelivered"`
 	NumWaiting     int            `json:"num_waiting"`
 	NumPending     uint64         `json:"num_pending"`
+	Cluster        *ClusterInfo   `json:"cluster,omitempty"`
 }
 
 // JSApiConsumerGetNextRequest is for getting next messages for pull based consumers

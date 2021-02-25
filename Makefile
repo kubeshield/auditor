@@ -474,7 +474,7 @@ else
 	IMAGE_PULL_SECRETS = --set imagePullSecrets[0].name=$(REGISTRY_SECRET)
 endif
 
-POLICYFILE_PATH ?= ""
+POLICYFILE_PATH ?= "$(HOME)/go/src/kmodules.xyz/auditor/hack/policy/default-policy.yaml"
 RECEIVER_ADDR 	?= "nats://classic-server.nats.svc"
 CREDENTIAL_PATH ?= ""
 LICENSE_FILE    ?=

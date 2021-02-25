@@ -23,7 +23,7 @@ github.com/beorn7/perks/quantile
 github.com/blang/semver
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
-# github.com/cloudevents/sdk-go/protocol/nats/v2 v2.3.1 => github.com/tamalsaha/sdk-go/protocol/nats/v2 v2.2.1-0.20210126105453-ecf7acedc0fe
+# github.com/cloudevents/sdk-go/protocol/nats/v2 v2.3.1
 ## explicit
 github.com/cloudevents/sdk-go/protocol/nats/v2
 # github.com/cloudevents/sdk-go/v2 v2.3.1
@@ -163,6 +163,8 @@ github.com/inconshreveable/mousetrap
 github.com/jpillora/go-ogle-analytics
 # github.com/json-iterator/go v1.1.10
 github.com/json-iterator/go
+# github.com/klauspost/compress v1.11.7
+github.com/klauspost/compress/s2
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 ## explicit
 # github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de
@@ -189,7 +191,7 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 github.com/munnerz/goautoneg
-# github.com/nats-io/jsm.go v0.0.20
+# github.com/nats-io/jsm.go v0.0.21-0.20210224150159-343b27c03df7
 ## explicit
 github.com/nats-io/jsm.go
 github.com/nats-io/jsm.go/api
@@ -200,9 +202,9 @@ github.com/nats-io/jsm.go/api/server/advisory
 github.com/nats-io/jsm.go/api/server/metric
 # github.com/nats-io/jwt v1.2.2
 ## explicit
-# github.com/nats-io/nats-server/v2 v2.1.9
+# github.com/nats-io/nats-server/v2 v2.1.8-0.20210225042523-cc038a6d950c
 ## explicit
-# github.com/nats-io/nats.go v1.10.1-0.20201111151633-9e1f4a0d80d8
+# github.com/nats-io/nats.go v1.10.1-0.20210224230559-c50dffa88d76
 ## explicit
 github.com/nats-io/nats.go
 github.com/nats-io/nats.go/encoders/builtin
@@ -464,7 +466,7 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 => google.golang.org/genproto v0.0.0-20191115194625-c23dd37a84c9
+# google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884 => google.golang.org/genproto v0.0.0-20191115194625-c23dd37a84c9
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.29.1 => google.golang.org/grpc v1.26.0
 google.golang.org/grpc
@@ -1133,4 +1135,3 @@ sigs.k8s.io/yaml
 # k8s.io/utils => k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
 # github.com/docker/docker => github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
 # helm.sh/helm/v3 => github.com/kubepack/helm/v3 v3.0.3-0.20200119202455-afb1ef54d569
-# github.com/cloudevents/sdk-go/protocol/nats/v2 => github.com/tamalsaha/sdk-go/protocol/nats/v2 v2.2.1-0.20210126105453-ecf7acedc0fe

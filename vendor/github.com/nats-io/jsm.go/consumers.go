@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -402,12 +403,22 @@ func (c *Consumer) Reset() error {
 }
 
 // NextSubject returns the subject used to retrieve the next message for pull-based Consumers, empty when not a pull-base consumer
+func (m *Manager) NextSubject(stream string, consumer string) (string, error) {
+	s, err := NextSubject(stream, consumer)
+	if err != nil {
+		return "", err
+	}
+
+	return m.apiSubject(s), err
+}
+
+// NextSubject returns the subject used to retrieve the next message for pull-based Consumers, empty when not a pull-base consumer
 func (c *Consumer) NextSubject() string {
 	if !c.IsPullMode() {
 		return ""
 	}
 
-	s, _ := NextSubject(c.stream, c.name)
+	s, _ := c.mgr.NextSubject(c.stream, c.name)
 
 	return s
 }
@@ -445,7 +456,11 @@ func (c *Consumer) MetricSubject() string {
 
 // NextMsg requests the next message from the server with the manager timeout
 func (m *Manager) NextMsg(stream string, consumer string) (*nats.Msg, error) {
-	s, err := NextSubject(stream, consumer)
+	if !m.nc.Opts.UseOldRequestStyle {
+		return nil, fmt.Errorf("pull mode requires the use of UseOldRequestStyle() option")
+	}
+
+	s, err := m.NextSubject(stream, consumer)
 	if err != nil {
 		return nil, err
 	}
@@ -463,7 +478,7 @@ func (m *Manager) NextMsg(stream string, consumer string) (*nats.Msg, error) {
 
 // NextMsgRequest creates a request for a batch of messages on a consumer, data or control flow messages will be sent to inbox
 func (m *Manager) NextMsgRequest(stream string, consumer string, inbox string, req *api.JSApiConsumerGetNextRequest) error {
-	s, err := NextSubject(stream, consumer)
+	s, err := m.NextSubject(stream, consumer)
 	if err != nil {
 		return err
 	}
@@ -473,13 +488,21 @@ func (m *Manager) NextMsgRequest(stream string, consumer string, inbox string, r
 		return err
 	}
 
+	if m.trace {
+		log.Printf(">>> %s:\n%s\n\n", s, string(jreq))
+	}
+
 	return m.nc.PublishMsg(&nats.Msg{Subject: s, Reply: inbox, Data: jreq})
 }
 
 // NextMsg requests the next message from the server. This request will wait for as long as the context is
 // active. If repeated pulls will be made it's better to use NextMsgRequest()
 func (m *Manager) NextMsgContext(ctx context.Context, stream string, consumer string) (*nats.Msg, error) {
-	s, err := NextSubject(stream, consumer)
+	if !m.nc.Opts.UseOldRequestStyle {
+		return nil, fmt.Errorf("pull mode requires the use of UseOldRequestStyle() option")
+	}
+
+	s, err := m.NextSubject(stream, consumer)
 	if err != nil {
 		return nil, err
 	}
@@ -585,6 +608,21 @@ func (c *Consumer) Delete() (err error) {
 	}
 
 	return fmt.Errorf("unknown response while removing consumer %s", c.Name())
+}
+
+// LeaderStepDown requests the current RAFT group leader in a clustered JetStream to stand down forcing a new election
+func (c *Consumer) LeaderStepDown() error {
+	var resp api.JSApiConsumerLeaderStepDownResponse
+	err := c.mgr.jsonRequest(fmt.Sprintf(api.JSApiConsumerLeaderStepDownT, c.StreamName(), c.Name()), nil, &resp)
+	if err != nil {
+		return err
+	}
+
+	if !resp.Success {
+		return fmt.Errorf("unknown error while requesting leader step down")
+	}
+
+	return nil
 }
 
 func (c *Consumer) Name() string                     { return c.name }

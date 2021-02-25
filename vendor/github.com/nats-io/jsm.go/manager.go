@@ -29,10 +29,12 @@ import (
 )
 
 type Manager struct {
-	nc        *nats.Conn
-	timeout   time.Duration
-	trace     bool
-	validator api.StructValidator
+	nc          *nats.Conn
+	timeout     time.Duration
+	trace       bool
+	validator   api.StructValidator
+	apiPrefix   string
+	eventPrefix string
 
 	sync.Mutex
 }
@@ -96,17 +98,9 @@ func (m *Manager) jsonRequest(subj string, req interface{}, response interface{}
 		}
 	}
 
-	if m.trace {
-		log.Printf(">>> %s\n%s\n\n", subj, string(body))
-	}
-
-	msg, err := m.request(subj, body)
+	msg, err := m.request(m.apiSubject(subj), body)
 	if err != nil {
 		return err
-	}
-
-	if m.trace {
-		log.Printf("<<< %s\n%s\n\n", subj, string(msg.Data))
 	}
 
 	err = json.Unmarshal(msg.Data, response)
@@ -217,13 +211,30 @@ func (m *Manager) requestWithTimeout(subj string, data []byte, timeout time.Dura
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	return m.requestWithContext(ctx, subj, data)
+	res, err = m.requestWithContext(ctx, subj, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
 }
 
 func (m *Manager) requestWithContext(ctx context.Context, subj string, data []byte) (res *nats.Msg, err error) {
+	if m.trace {
+		log.Printf(">>> %s\n%s\n\n", subj, string(data))
+	}
+
 	res, err = m.nc.RequestWithContext(ctx, subj, data)
 	if err != nil {
-		return nil, err
+		if m.trace {
+			log.Printf("<<< %s: %s\n\n", subj, err.Error())
+		}
+
+		return res, err
+	}
+
+	if m.trace {
+		log.Printf("<<< %s\n%s\n\n", subj, string(res.Data))
 	}
 
 	return res, ParseErrorResponse(res)
@@ -430,4 +441,8 @@ func (m *Manager) Streams() (streams []*Stream, err error) {
 	}
 
 	return streams, nil
+}
+
+func (m *Manager) apiSubject(subject string) string {
+	return APISubject(subject, m.apiPrefix)
 }

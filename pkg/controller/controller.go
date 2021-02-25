@@ -19,8 +19,8 @@ package controller
 import (
 	"fmt"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/glog"
+	"github.com/nats-io/nats.go"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -38,8 +38,9 @@ type AuditorController struct {
 	recorder      record.EventRecorder
 
 	dynamicInformerFactory dynamicinformer.DynamicSharedInformerFactory
-	cloudEventsClient      cloudevents.Client
-	natsSubject            string
+
+	natsClient  *nats.Conn
+	natsSubject string
 }
 
 func (c *AuditorController) Run(stopCh <-chan struct{}) {

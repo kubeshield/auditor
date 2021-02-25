@@ -20,10 +20,10 @@ require (
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/mitchellh/mapstructure v1.4.0 // indirect
-	github.com/nats-io/jsm.go v0.0.20
+	github.com/nats-io/jsm.go v0.0.21-0.20210224150159-343b27c03df7
 	github.com/nats-io/jwt v1.2.2 // indirect
-	github.com/nats-io/nats-server/v2 v2.1.9 // indirect
-	github.com/nats-io/nats.go v1.10.1-0.20201111151633-9e1f4a0d80d8
+	github.com/nats-io/nats-server/v2 v2.1.8-0.20210225042523-cc038a6d950c // indirect
+	github.com/nats-io/nats.go v1.10.1-0.20210224230559-c50dffa88d76
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/spf13/cobra v1.1.1
@@ -154,5 +154,3 @@ replace (
 	github.com/docker/docker => github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
 	helm.sh/helm/v3 => github.com/kubepack/helm/v3 v3.0.3-0.20200119202455-afb1ef54d569
 )
-
-replace github.com/cloudevents/sdk-go/protocol/nats/v2 => github.com/tamalsaha/sdk-go/protocol/nats/v2 v2.2.1-0.20210126105453-ecf7acedc0fe

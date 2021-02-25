@@ -44,7 +44,7 @@ var DefaultWorkQueue = api.StreamConfig{
 	MaxBytes:     -1,
 	MaxAge:       24 * 365 * time.Hour,
 	MaxMsgSize:   -1,
-	Replicas:     1,
+	Replicas:     api.StreamDefaultReplicas,
 	NoAck:        false,
 }
 
@@ -300,6 +300,54 @@ func DuplicateWindow(d time.Duration) StreamOption {
 	}
 }
 
+func PlacementCluster(cluster string) StreamOption {
+	return func(o *api.StreamConfig) error {
+		if o.Placement == nil {
+			o.Placement = &api.Placement{}
+		}
+
+		o.Placement.Cluster = cluster
+
+		return nil
+	}
+}
+
+func PlacementTags(tags ...string) StreamOption {
+	return func(o *api.StreamConfig) error {
+		if o.Placement == nil {
+			o.Placement = &api.Placement{}
+		}
+
+		o.Placement.Tags = tags
+
+		return nil
+	}
+}
+
+func Mirror(stream *api.StreamSource) StreamOption {
+	return func(o *api.StreamConfig) error {
+		o.Mirror = stream
+
+		return nil
+	}
+}
+
+func AppendSource(source *api.StreamSource) StreamOption {
+	return func(o *api.StreamConfig) error {
+		o.Sources = append(o.Sources, source)
+
+		return nil
+	}
+}
+
+func Sources(streams ...*api.StreamSource) StreamOption {
+	return func(o *api.StreamConfig) error {
+		o.Sources = streams
+
+		return nil
+	}
+}
+
 // PageContents creates a StreamPager used to traverse the contents of the stream,
 // Close() should be called to dispose of the background consumer and resources
 func (s *Stream) PageContents(opts ...PagerOption) (*StreamPager, error) {
@@ -495,8 +543,45 @@ func (s *Stream) MetricSubject() string {
 	return api.JSMetricPrefix + ".*.*." + s.Name() + ".*"
 }
 
+// RemoveRAFTPeer removes a peer from the group indicating it will not return
+func (s *Stream) RemoveRAFTPeer(peer string) error {
+	var resp api.JSApiStreamRemovePeerResponse
+	err := s.mgr.jsonRequest(fmt.Sprintf(api.JSApiStreamRemovePeerT, s.Name()), api.JSApiStreamRemovePeerRequest{Peer: peer}, &resp)
+	if err != nil {
+		return err
+	}
+
+	if !resp.Success {
+		return fmt.Errorf("unknown error while removing peer %q", peer)
+	}
+
+	return nil
+}
+
+// LeaderStepDown requests the current RAFT group leader in a clustered JetStream to stand down forcing a new election
+func (s *Stream) LeaderStepDown() error {
+	var resp api.JSApiStreamLeaderStepDownResponse
+	err := s.mgr.jsonRequest(fmt.Sprintf(api.JSApiStreamLeaderStepDownT, s.Name()), nil, &resp)
+	if err != nil {
+		return err
+	}
+
+	if !resp.Success {
+		return fmt.Errorf("unknown error while requesting leader step down")
+	}
+
+	return nil
+}
+
 // IsTemplateManaged determines if this stream is managed by a template
 func (s *Stream) IsTemplateManaged() bool { return s.Template() != "" }
+
+// IsMirror determines if this stream is a mirror of another
+func (s *Stream) IsMirror() bool { return s.cfg.Mirror != nil }
+
+// IsSourced determines if this stream is sourcing data from another stream. Other streams
+// could be synced to this stream and it would not be reported by this property
+func (s *Stream) IsSourced() bool { return len(s.cfg.Sources) > 0 }
 
 func (s *Stream) Configuration() api.StreamConfig { return *s.cfg }
 func (s *Stream) Name() string                    { return s.cfg.Name }
@@ -512,3 +597,5 @@ func (s *Stream) Replicas() int                   { return s.cfg.Replicas }
 func (s *Stream) NoAck() bool                     { return s.cfg.NoAck }
 func (s *Stream) Template() string                { return s.cfg.Template }
 func (s *Stream) DuplicateWindow() time.Duration  { return s.cfg.Duplicates }
+func (s *Stream) Mirror() *api.StreamSource       { return s.cfg.Mirror }
+func (s *Stream) Sources() []*api.StreamSource    { return s.cfg.Sources }

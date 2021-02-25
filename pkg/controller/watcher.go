@@ -51,12 +51,6 @@ func (c *AuditorController) initWatchers() error {
 				return
 			}
 
-			data, err := u.MarshalJSON()
-			//data, err := yaml.Marshal(u)
-			if err != nil {
-				log.Errorf("Error occurred while marshaling json, reason: %v", err)
-				return
-			}
 			m, err := mapper.RESTMapping(schema.GroupKind{
 				Group: u.GroupVersionKind().Group,
 				Kind:  u.GroupVersionKind().Kind,
@@ -67,7 +61,7 @@ func (c *AuditorController) initWatchers() error {
 			gvr := m.Resource
 
 			op := strings.Join([]string{cid, gvr.Group, gvr.Version, gvr.Resource, u.GetNamespace(), u.GetName(), "create"}, "$")
-			if err = receiver.PublishEvent(c.cloudEventsClient, c.natsSubject, op, data); err != nil {
+			if err = receiver.PublishEvent(c.natsClient, c.natsSubject, op, u); err != nil {
 				log.Errorf("Error while publishing event, reason: %v", err)
 			}
 		},
@@ -87,12 +81,6 @@ func (c *AuditorController) initWatchers() error {
 				return
 			}
 
-			data, err := uNew.MarshalJSON()
-			if err != nil {
-				log.Errorf("Error occurred while marshaling json, reason: %v", err)
-				return
-			}
-
 			m, err := mapper.RESTMapping(schema.GroupKind{
 				Group: uNew.GroupVersionKind().Group,
 				Kind:  uNew.GroupVersionKind().Kind,
@@ -103,7 +91,7 @@ func (c *AuditorController) initWatchers() error {
 			gvr := m.Resource
 
 			op := strings.Join([]string{cid, gvr.Group, gvr.Version, gvr.Resource, uNew.GetNamespace(), uNew.GetName(), "update"}, "$")
-			if err = receiver.PublishEvent(c.cloudEventsClient, c.natsSubject, op, data); err != nil {
+			if err = receiver.PublishEvent(c.natsClient, c.natsSubject, op, uNew); err != nil {
 				log.Errorf("Error while publishing event, reason: %v", err)
 			}
 
@@ -118,12 +106,6 @@ func (c *AuditorController) initWatchers() error {
 				return
 			}
 
-			data, err := u.MarshalJSON()
-			if err != nil {
-				log.Errorf("Error occurred while marshaling json, reason: %v", err)
-				return
-			}
-
 			m, err := mapper.RESTMapping(schema.GroupKind{
 				Group: u.GroupVersionKind().Group,
 				Kind:  u.GroupVersionKind().Kind,
@@ -134,7 +116,7 @@ func (c *AuditorController) initWatchers() error {
 			gvr := m.Resource
 
 			op := strings.Join([]string{cid, gvr.Group, gvr.Version, gvr.Resource, u.GetNamespace(), u.GetName(), "delete"}, "$")
-			if err = receiver.PublishEvent(c.cloudEventsClient, c.natsSubject, op, data); err != nil {
+			if err = receiver.PublishEvent(c.natsClient, c.natsSubject, op, u); err != nil {
 				log.Errorf("Error while publishing event, reason: %v", err)
 			}
 		},

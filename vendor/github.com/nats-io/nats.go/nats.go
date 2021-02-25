@@ -1,4 +1,4 @@
-// Copyright 2012-2020 The NATS Authors
+// Copyright 2012-2021 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -54,10 +54,9 @@ const (
 	DefaultReconnectJitter    = 100 * time.Millisecond
 	DefaultReconnectJitterTLS = time.Second
 	DefaultTimeout            = 2 * time.Second
-	DefaultJetStreamTimeout   = 2 * time.Second
 	DefaultPingInterval       = 2 * time.Minute
 	DefaultMaxPingOut         = 2
-	DefaultMaxChanLen         = 8192            // 8k
+	DefaultMaxChanLen         = 64 * 1024       // 64k
 	DefaultReconnectBufSize   = 8 * 1024 * 1024 // 8MB
 	RequestChanLen            = 8
 	DefaultDrainTimeout       = 30 * time.Second
@@ -80,58 +79,69 @@ const (
 
 // Errors
 var (
-	ErrConnectionClosed       = errors.New("nats: connection closed")
-	ErrConnectionDraining     = errors.New("nats: connection draining")
-	ErrDrainTimeout           = errors.New("nats: draining connection timed out")
-	ErrConnectionReconnecting = errors.New("nats: connection reconnecting")
-	ErrSecureConnRequired     = errors.New("nats: secure connection required")
-	ErrSecureConnWanted       = errors.New("nats: secure connection not available")
-	ErrBadSubscription        = errors.New("nats: invalid subscription")
-	ErrTypeSubscription       = errors.New("nats: invalid subscription type")
-	ErrBadSubject             = errors.New("nats: invalid subject")
-	ErrBadQueueName           = errors.New("nats: invalid queue name")
-	ErrSlowConsumer           = errors.New("nats: slow consumer, messages dropped")
-	ErrTimeout                = errors.New("nats: timeout")
-	ErrBadTimeout             = errors.New("nats: timeout invalid")
-	ErrAuthorization          = errors.New("nats: authorization violation")
-	ErrAuthExpired            = errors.New("nats: authentication expired")
-	ErrNoServers              = errors.New("nats: no servers available for connection")
-	ErrJsonParse              = errors.New("nats: connect message, json parse error")
-	ErrChanArg                = errors.New("nats: argument needs to be a channel type")
-	ErrMaxPayload             = errors.New("nats: maximum payload exceeded")
-	ErrMaxMessages            = errors.New("nats: maximum messages delivered")
-	ErrSyncSubRequired        = errors.New("nats: illegal call on an async subscription")
-	ErrMultipleTLSConfigs     = errors.New("nats: multiple tls.Configs not allowed")
-	ErrNoInfoReceived         = errors.New("nats: protocol exception, INFO not received")
-	ErrReconnectBufExceeded   = errors.New("nats: outbound buffer limit exceeded")
-	ErrInvalidConnection      = errors.New("nats: invalid connection")
-	ErrInvalidMsg             = errors.New("nats: invalid message or message nil")
-	ErrInvalidArg             = errors.New("nats: invalid argument")
-	ErrInvalidContext         = errors.New("nats: invalid context")
-	ErrNoDeadlineContext      = errors.New("nats: context requires a deadline")
-	ErrNoEchoNotSupported     = errors.New("nats: no echo option not supported by this server")
-	ErrClientIDNotSupported   = errors.New("nats: client ID not supported by this server")
-	ErrUserButNoSigCB         = errors.New("nats: user callback defined without a signature handler")
-	ErrNkeyButNoSigCB         = errors.New("nats: nkey defined without a signature handler")
-	ErrNoUserCB               = errors.New("nats: user callback not defined")
-	ErrNkeyAndUser            = errors.New("nats: user callback and nkey defined")
-	ErrNkeysNotSupported      = errors.New("nats: nkeys not supported by the server")
-	ErrStaleConnection        = errors.New("nats: " + STALE_CONNECTION)
-	ErrTokenAlreadySet        = errors.New("nats: token and token handler both set")
-	ErrMsgNotBound            = errors.New("nats: message is not bound to subscription/connection")
-	ErrMsgNoReply             = errors.New("nats: message does not have a reply")
-	ErrClientIPNotSupported   = errors.New("nats: client IP not supported by this server")
-	ErrDisconnected           = errors.New("nats: server is disconnected")
-	ErrHeadersNotSupported    = errors.New("nats: headers not supported by this server")
-	ErrBadHeaderMsg           = errors.New("nats: message could not decode headers")
-	ErrNoResponders           = errors.New("nats: no responders available for request")
-	ErrNoContextOrTimeout     = errors.New("nats: no context or timeout given")
-	ErrNotJSMessage           = errors.New("nats: not a JetStream message")
-	ErrInvalidStreamName      = errors.New("nats: invalid stream name")
-	ErrInvalidJSAck           = errors.New("nats: invalid JetStream publish acknowledgement")
-	ErrMultiStreamUnsupported = errors.New("nats: multiple streams are not supported")
-	ErrStreamNameRequired     = errors.New("nats: Stream name is required")
-	ErrConsumerConfigRequired = errors.New("nats: Consumer configuration is required")
+	ErrConnectionClosed             = errors.New("nats: connection closed")
+	ErrConnectionDraining           = errors.New("nats: connection draining")
+	ErrDrainTimeout                 = errors.New("nats: draining connection timed out")
+	ErrConnectionReconnecting       = errors.New("nats: connection reconnecting")
+	ErrSecureConnRequired           = errors.New("nats: secure connection required")
+	ErrSecureConnWanted             = errors.New("nats: secure connection not available")
+	ErrBadSubscription              = errors.New("nats: invalid subscription")
+	ErrTypeSubscription             = errors.New("nats: invalid subscription type")
+	ErrBadSubject                   = errors.New("nats: invalid subject")
+	ErrBadQueueName                 = errors.New("nats: invalid queue name")
+	ErrSlowConsumer                 = errors.New("nats: slow consumer, messages dropped")
+	ErrTimeout                      = errors.New("nats: timeout")
+	ErrBadTimeout                   = errors.New("nats: timeout invalid")
+	ErrAuthorization                = errors.New("nats: authorization violation")
+	ErrAuthExpired                  = errors.New("nats: authentication expired")
+	ErrNoServers                    = errors.New("nats: no servers available for connection")
+	ErrJsonParse                    = errors.New("nats: connect message, json parse error")
+	ErrChanArg                      = errors.New("nats: argument needs to be a channel type")
+	ErrMaxPayload                   = errors.New("nats: maximum payload exceeded")
+	ErrMaxMessages                  = errors.New("nats: maximum messages delivered")
+	ErrSyncSubRequired              = errors.New("nats: illegal call on an async subscription")
+	ErrMultipleTLSConfigs           = errors.New("nats: multiple tls.Configs not allowed")
+	ErrNoInfoReceived               = errors.New("nats: protocol exception, INFO not received")
+	ErrReconnectBufExceeded         = errors.New("nats: outbound buffer limit exceeded")
+	ErrInvalidConnection            = errors.New("nats: invalid connection")
+	ErrInvalidMsg                   = errors.New("nats: invalid message or message nil")
+	ErrInvalidArg                   = errors.New("nats: invalid argument")
+	ErrInvalidContext               = errors.New("nats: invalid context")
+	ErrNoDeadlineContext            = errors.New("nats: context requires a deadline")
+	ErrNoEchoNotSupported           = errors.New("nats: no echo option not supported by this server")
+	ErrClientIDNotSupported         = errors.New("nats: client ID not supported by this server")
+	ErrUserButNoSigCB               = errors.New("nats: user callback defined without a signature handler")
+	ErrNkeyButNoSigCB               = errors.New("nats: nkey defined without a signature handler")
+	ErrNoUserCB                     = errors.New("nats: user callback not defined")
+	ErrNkeyAndUser                  = errors.New("nats: user callback and nkey defined")
+	ErrNkeysNotSupported            = errors.New("nats: nkeys not supported by the server")
+	ErrStaleConnection              = errors.New("nats: " + STALE_CONNECTION)
+	ErrTokenAlreadySet              = errors.New("nats: token and token handler both set")
+	ErrMsgNotBound                  = errors.New("nats: message is not bound to subscription/connection")
+	ErrMsgNoReply                   = errors.New("nats: message does not have a reply")
+	ErrClientIPNotSupported         = errors.New("nats: client IP not supported by this server")
+	ErrDisconnected                 = errors.New("nats: server is disconnected")
+	ErrHeadersNotSupported          = errors.New("nats: headers not supported by this server")
+	ErrBadHeaderMsg                 = errors.New("nats: message could not decode headers")
+	ErrNoResponders                 = errors.New("nats: no responders available for request")
+	ErrNoContextOrTimeout           = errors.New("nats: no context or timeout given")
+	ErrDirectModeRequired           = errors.New("nats: direct access requires direct pull or push")
+	ErrPullModeNotAllowed           = errors.New("nats: pull based not supported")
+	ErrJetStreamNotEnabled          = errors.New("nats: jetstream not enabled")
+	ErrJetStreamBadPre              = errors.New("nats: jetstream api prefix not valid")
+	ErrNoStreamResponse             = errors.New("nats: no response from stream")
+	ErrNotJSMessage                 = errors.New("nats: not a jetstream message")
+	ErrInvalidStreamName            = errors.New("nats: invalid stream name")
+	ErrInvalidDurableName           = errors.New("nats: invalid durable name")
+	ErrNoMatchingStream             = errors.New("nats: no stream matches subject")
+	ErrSubjectMismatch              = errors.New("nats: subject does not match consumer")
+	ErrContextAndTimeout            = errors.New("nats: context and timeout can not both be set")
+	ErrInvalidJSAck                 = errors.New("nats: invalid jetstream publish response")
+	ErrMultiStreamUnsupported       = errors.New("nats: multiple streams are not supported")
+	ErrStreamNameRequired           = errors.New("nats: stream name is required")
+	ErrConsumerConfigRequired       = errors.New("nats: consumer configuration is required")
+	ErrStreamSnapshotConfigRequired = errors.New("nats: stream snapshot configuration is required")
+	ErrDeliverSubjectRequired       = errors.New("nats: deliver subject is required")
 )
 
 func init() {
@@ -147,7 +157,6 @@ func GetDefaultOptions() Options {
 		ReconnectJitter:    DefaultReconnectJitter,
 		ReconnectJitterTLS: DefaultReconnectJitterTLS,
 		Timeout:            DefaultTimeout,
-		JetStreamTimeout:   DefaultJetStreamTimeout,
 		PingInterval:       DefaultPingInterval,
 		MaxPingsOut:        DefaultMaxPingOut,
 		SubChanLen:         DefaultMaxChanLen,
@@ -301,9 +310,6 @@ type Options struct {
 
 	// Timeout sets the timeout for a Dial operation on a connection.
 	Timeout time.Duration
-
-	// JetStreamTimeout set the default timeout for the JetStream API
-	JetStreamTimeout time.Duration
 
 	// DrainTimeout sets the timeout for a Drain Operation to complete.
 	DrainTimeout time.Duration
@@ -480,7 +486,7 @@ type Conn struct {
 	respRand  *rand.Rand           // Used for generating suffix
 }
 
-// A Subscription represents interest in a given subject.
+// Subscription represents interest in a given subject.
 type Subscription struct {
 	mu  sync.Mutex
 	sid int64
@@ -494,9 +500,8 @@ type Subscription struct {
 	// only be processed by one member of the group.
 	Queue string
 
-	// ConsumerConfig is the configuration for the JetStream consumer if one was created
-	// or updated using the subscription options
-	ConsumerConfig *ConsumerConfig
+	// For holding information about a JetStream consumer.
+	jsi *jsSub
 
 	delivered  uint64
 	max        uint64
@@ -525,7 +530,8 @@ type Subscription struct {
 	dropped     int
 }
 
-// Msg is a structure used by Subscribers and PublishMsg().
+// Msg represents a message delivered by NATS. This structure is used
+// by Subscribers and PublishMsg().
 type Msg struct {
 	Subject string
 	Reply   string
@@ -534,7 +540,7 @@ type Msg struct {
 	Sub     *Subscription
 	next    *Msg
 	barrier *barrierInfo
-	jsMeta  *JetStreamMsgMetaData
+	ackd    uint32
 }
 
 func (m *Msg) headerBytes() ([]byte, error) {
@@ -816,14 +822,6 @@ func ReconnectBufSize(size int) Option {
 func Timeout(t time.Duration) Option {
 	return func(o *Options) error {
 		o.Timeout = t
-		return nil
-	}
-}
-
-// JetStreamTimeout is an Option to set the timeout for access to the JetStream API
-func JetStreamTimeout(t time.Duration) Option {
-	return func(o *Options) error {
-		o.JetStreamTimeout = t
 		return nil
 	}
 }
@@ -1164,6 +1162,11 @@ func (o Options) Connect() (*Conn, error) {
 	nc.ach = &asyncCallbacksHandler{}
 	nc.ach.cond = sync.NewCond(&nc.ach.mu)
 
+	// Set a default error handler that will print to stderr.
+	if nc.Opts.AsyncErrorCB == nil {
+		nc.Opts.AsyncErrorCB = defaultErrHandler
+	}
+
 	if err := nc.connect(); err != nil {
 		return nil, err
 	}
@@ -1172,6 +1175,22 @@ func (o Options) Connect() (*Conn, error) {
 	go nc.ach.asyncCBDispatcher()
 
 	return nc, nil
+}
+
+func defaultErrHandler(nc *Conn, sub *Subscription, err error) {
+	var cid uint64
+	if nc != nil {
+		nc.mu.RLock()
+		cid = nc.info.CID
+		nc.mu.RUnlock()
+	}
+	var errStr string
+	if sub != nil {
+		errStr = fmt.Sprintf("%s on connection [%d] for subscription on %q\n", err.Error(), cid, sub.Subject)
+	} else {
+		errStr = fmt.Sprintf("%s on connection [%d]\n", err.Error(), cid)
+	}
+	os.Stderr.WriteString(errStr)
 }
 
 const (
@@ -2393,18 +2412,18 @@ func (nc *Conn) waitForMsgs(s *Subscription) {
 // or the pending queue is over the pending limits, the connection is
 // considered a slow consumer.
 func (nc *Conn) processMsg(data []byte) {
-	// Don't lock the connection to avoid server cutting us off if the
-	// flusher is holding the connection lock, trying to send to the server
-	// that is itself trying to send data to us.
-	nc.subsMu.RLock()
-
 	// Stats
 	atomic.AddUint64(&nc.InMsgs, 1)
 	atomic.AddUint64(&nc.InBytes, uint64(len(data)))
 
+	// Don't lock the connection to avoid server cutting us off if the
+	// flusher is holding the connection lock, trying to send to the server
+	// that is itself trying to send data to us.
+	nc.subsMu.RLock()
 	sub := nc.subs[nc.ps.ma.sid]
+	nc.subsMu.RUnlock()
+
 	if sub == nil {
-		nc.subsMu.RUnlock()
 		return
 	}
 
@@ -2443,6 +2462,12 @@ func (nc *Conn) processMsg(data []byte) {
 
 	sub.mu.Lock()
 
+	// Check if closed.
+	if sub.closed {
+		sub.mu.Unlock()
+		return
+	}
+
 	// Subscription internal stats (applicable only for non ChanSubscription's)
 	if sub.typ != ChanSubscription {
 		sub.pMsgs++
@@ -2474,7 +2499,9 @@ func (nc *Conn) processMsg(data []byte) {
 		if sub.pHead == nil {
 			sub.pHead = m
 			sub.pTail = m
-			sub.pCond.Signal()
+			if sub.pCond != nil {
+				sub.pCond.Signal()
+			}
 		} else {
 			sub.pTail.next = m
 			sub.pTail = m
@@ -2485,7 +2512,6 @@ func (nc *Conn) processMsg(data []byte) {
 	sub.sc = false
 
 	sub.mu.Unlock()
-	nc.subsMu.RUnlock()
 	return
 
 slowConsumer:
@@ -2498,7 +2524,6 @@ slowConsumer:
 		sub.pBytes -= len(m.Data)
 	}
 	sub.mu.Unlock()
-	nc.subsMu.RUnlock()
 	if sc {
 		// Now we need connection's lock and we may end-up in the situation
 		// that we were trying to avoid, except that in this case, the client
@@ -2779,15 +2804,11 @@ func (nc *Conn) kickFlusher() {
 // Publish publishes the data argument to the given subject. The data
 // argument is left untouched and needs to be correctly interpreted on
 // the receiver.
-func (nc *Conn) Publish(subj string, data []byte, opts ...PublishOption) error {
-	if len(opts) > 0 {
-		return nc.jsPublish(subj, data, opts)
-	}
-
+func (nc *Conn) Publish(subj string, data []byte) error {
 	return nc.publish(subj, _EMPTY_, nil, data)
 }
 
-// Used to create a new message for publishing that will use headers.
+// NewMsg creates a message for publishing that will use headers.
 func NewMsg(subject string) *Msg {
 	return &Msg{
 		Subject: subject,
@@ -3044,7 +3065,7 @@ func (nc *Conn) createNewRequestAndSend(subj string, hdr, data []byte) (chan *Ms
 		// Create the response subscription we will use for all new style responses.
 		// This will be on an _INBOX with an additional terminal token. The subscription
 		// will be on a wildcard.
-		s, err := nc.subscribeLocked(nc.respSub, _EMPTY_, nc.respHandler, nil, false)
+		s, err := nc.subscribeLocked(nc.respSub, _EMPTY_, nc.respHandler, nil, false, nil)
 		if err != nil {
 			nc.mu.Unlock()
 			return nil, token, err
@@ -3148,7 +3169,7 @@ func (nc *Conn) oldRequest(subj string, hdr, data []byte, timeout time.Duration)
 	inbox := NewInbox()
 	ch := make(chan *Msg, RequestChanLen)
 
-	s, err := nc.subscribe(inbox, _EMPTY_, nil, ch, true)
+	s, err := nc.subscribe(inbox, _EMPTY_, nil, ch, true, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -3235,15 +3256,15 @@ func (nc *Conn) respToken(respInbox string) string {
 // Subscribe will express interest in the given subject. The subject
 // can have wildcards (partial:*, full:>). Messages will be delivered
 // to the associated MsgHandler.
-func (nc *Conn) Subscribe(subj string, cb MsgHandler, opts ...SubscribeOption) (*Subscription, error) {
-	return nc.subscribe(subj, _EMPTY_, cb, nil, false, opts...)
+func (nc *Conn) Subscribe(subj string, cb MsgHandler) (*Subscription, error) {
+	return nc.subscribe(subj, _EMPTY_, cb, nil, false, nil)
 }
 
 // ChanSubscribe will express interest in the given subject and place
 // all messages received on the channel.
 // You should not close the channel until sub.Unsubscribe() has been called.
-func (nc *Conn) ChanSubscribe(subj string, ch chan *Msg, opts ...SubscribeOption) (*Subscription, error) {
-	return nc.subscribe(subj, _EMPTY_, nil, ch, false, opts...)
+func (nc *Conn) ChanSubscribe(subj string, ch chan *Msg) (*Subscription, error) {
+	return nc.subscribe(subj, _EMPTY_, nil, ch, false, nil)
 }
 
 // ChanQueueSubscribe will express interest in the given subject.
@@ -3252,18 +3273,18 @@ func (nc *Conn) ChanSubscribe(subj string, ch chan *Msg, opts ...SubscribeOption
 // which will be placed on the channel.
 // You should not close the channel until sub.Unsubscribe() has been called.
 // Note: This is the same than QueueSubscribeSyncWithChan.
-func (nc *Conn) ChanQueueSubscribe(subj, group string, ch chan *Msg, opts ...SubscribeOption) (*Subscription, error) {
-	return nc.subscribe(subj, group, nil, ch, false, opts...)
+func (nc *Conn) ChanQueueSubscribe(subj, group string, ch chan *Msg) (*Subscription, error) {
+	return nc.subscribe(subj, group, nil, ch, false, nil)
 }
 
 // SubscribeSync will express interest on the given subject. Messages will
 // be received synchronously using Subscription.NextMsg().
-func (nc *Conn) SubscribeSync(subj string, opts ...SubscribeOption) (*Subscription, error) {
+func (nc *Conn) SubscribeSync(subj string) (*Subscription, error) {
 	if nc == nil {
 		return nil, ErrInvalidConnection
 	}
 	mch := make(chan *Msg, nc.Opts.SubChanLen)
-	s, e := nc.subscribe(subj, _EMPTY_, nil, mch, true, opts...)
+	s, e := nc.subscribe(subj, _EMPTY_, nil, mch, true, nil)
 	return s, e
 }
 
@@ -3271,17 +3292,17 @@ func (nc *Conn) SubscribeSync(subj string, opts ...SubscribeOption) (*Subscripti
 // All subscribers with the same queue name will form the queue group and
 // only one member of the group will be selected to receive any given
 // message asynchronously.
-func (nc *Conn) QueueSubscribe(subj, queue string, cb MsgHandler, opts ...SubscribeOption) (*Subscription, error) {
-	return nc.subscribe(subj, queue, cb, nil, false, opts...)
+func (nc *Conn) QueueSubscribe(subj, queue string, cb MsgHandler) (*Subscription, error) {
+	return nc.subscribe(subj, queue, cb, nil, false, nil)
 }
 
 // QueueSubscribeSync creates a synchronous queue subscriber on the given
 // subject. All subscribers with the same queue name will form the queue
 // group and only one member of the group will be selected to receive any
 // given message synchronously using Subscription.NextMsg().
-func (nc *Conn) QueueSubscribeSync(subj, queue string, opts ...SubscribeOption) (*Subscription, error) {
+func (nc *Conn) QueueSubscribeSync(subj, queue string) (*Subscription, error) {
 	mch := make(chan *Msg, nc.Opts.SubChanLen)
-	s, e := nc.subscribe(subj, queue, nil, mch, true, opts...)
+	s, e := nc.subscribe(subj, queue, nil, mch, true, nil)
 	return s, e
 }
 
@@ -3291,8 +3312,8 @@ func (nc *Conn) QueueSubscribeSync(subj, queue string, opts ...SubscribeOption) 
 // which will be placed on the channel.
 // You should not close the channel until sub.Unsubscribe() has been called.
 // Note: This is the same than ChanQueueSubscribe.
-func (nc *Conn) QueueSubscribeSyncWithChan(subj, queue string, ch chan *Msg, opts ...SubscribeOption) (*Subscription, error) {
-	return nc.subscribe(subj, queue, nil, ch, false, opts...)
+func (nc *Conn) QueueSubscribeSyncWithChan(subj, queue string, ch chan *Msg) (*Subscription, error) {
+	return nc.subscribe(subj, queue, nil, ch, false, nil)
 }
 
 // badSubject will do quick test on whether a subject is acceptable.
@@ -3316,47 +3337,16 @@ func badQueue(qname string) bool {
 }
 
 // subscribe is the internal subscribe function that indicates interest in a subject.
-func (nc *Conn) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync bool, opts ...SubscribeOption) (*Subscription, error) {
+func (nc *Conn) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync bool, js *jsSub) (*Subscription, error) {
 	if nc == nil {
 		return nil, ErrInvalidConnection
 	}
-
-	var aopts *jsOpts
-	if len(opts) > 0 {
-		aopts = newJsOpts()
-		for _, f := range opts {
-			if err := f(aopts); err != nil {
-				return nil, err
-			}
-		}
-
-		if subj == "" {
-			subj = NewInbox()
-		}
-	}
-
 	nc.mu.Lock()
-	s, err := nc.subscribeLocked(subj, queue, cb, ch, isSync, opts...)
-	nc.mu.Unlock()
-	if err != nil {
-		return nil, err
-	}
-
-	// here so that interest exist already when doing ephemerals
-	if aopts != nil {
-		nfo, err := nc.createOrUpdateConsumer(aopts, subj)
-		if err != nil {
-			s.Unsubscribe()
-			return nil, fmt.Errorf("nats: JetStream consumer creation failed: %s", err)
-		}
-
-		s.ConsumerConfig = &nfo.Config
-	}
-
-	return s, nil
+	defer nc.mu.Unlock()
+	return nc.subscribeLocked(subj, queue, cb, ch, isSync, js)
 }
 
-func (nc *Conn) subscribeLocked(subj, queue string, cb MsgHandler, ch chan *Msg, isSync bool, opts ...SubscribeOption) (*Subscription, error) {
+func (nc *Conn) subscribeLocked(subj, queue string, cb MsgHandler, ch chan *Msg, isSync bool, js *jsSub) (*Subscription, error) {
 	if nc == nil {
 		return nil, ErrInvalidConnection
 	}
@@ -3379,9 +3369,13 @@ func (nc *Conn) subscribeLocked(subj, queue string, cb MsgHandler, ch chan *Msg,
 		return nil, ErrBadSubscription
 	}
 
-	sub := &Subscription{Subject: subj, Queue: queue, mcb: cb, conn: nc}
+	sub := &Subscription{Subject: subj, Queue: queue, mcb: cb, conn: nc, jsi: js}
 	// Set pending limits.
-	sub.pMsgsLimit = DefaultSubPendingMsgsLimit
+	if ch != nil {
+		sub.pMsgsLimit = cap(ch)
+	} else {
+		sub.pMsgsLimit = DefaultSubPendingMsgsLimit
+	}
 	sub.pBytesLimit = DefaultSubPendingBytesLimit
 
 	// If we have an async callback, start up a sub specific
@@ -3571,6 +3565,17 @@ func (s *Subscription) AutoUnsubscribe(max int) error {
 // unsubscribe performs the low level unsubscribe to the server.
 // Use Subscription.Unsubscribe()
 func (nc *Conn) unsubscribe(sub *Subscription, max int, drainMode bool) error {
+	// Check whether it is a JetStream sub and should clean up consumers.
+	sub.mu.Lock()
+	jsi := sub.jsi
+	sub.mu.Unlock()
+	if jsi != nil {
+		err := jsi.unsubscribe(drainMode)
+		if err != nil {
+			return err
+		}
+	}
+
 	nc.mu.Lock()
 	// ok here, but defer is expensive
 	defer nc.mu.Unlock()
@@ -3710,6 +3715,7 @@ func (s *Subscription) processNextMsgDelivered(msg *Msg) error {
 	s.mu.Lock()
 	nc := s.conn
 	max := s.max
+	jsi := s.jsi
 
 	// Update some stats.
 	s.delivered++
@@ -3730,6 +3736,12 @@ func (s *Subscription) processNextMsgDelivered(msg *Msg) error {
 			nc.removeSub(s)
 			nc.mu.Unlock()
 		}
+	}
+
+	// In case this is a JetStream message and in pull mode
+	// then check whether it is an JS API error.
+	if jsi != nil && jsi.pull > 0 && len(msg.Data) == 0 && msg.Header.Get(statusHdr) == noResponders {
+		return ErrNoResponders
 	}
 
 	return nil
@@ -3793,8 +3805,10 @@ func (s *Subscription) ClearMaxPending() error {
 
 // Pending Limits
 const (
-	DefaultSubPendingMsgsLimit  = 65536
-	DefaultSubPendingBytesLimit = 65536 * 1024
+	// DefaultSubPendingMsgsLimit will be 512k msgs.
+	DefaultSubPendingMsgsLimit = 512 * 1024
+	// DefaultSubPendingBytesLimit is 64MB
+	DefaultSubPendingBytesLimit = 64 * 1024 * 1024
 )
 
 // PendingLimits returns the current limits for this subscription.
@@ -3888,6 +3902,7 @@ func (m *Msg) RespondMsg(msg *Msg) error {
 	if m.Reply == "" {
 		return ErrMsgNoReply
 	}
+	msg.Subject = m.Reply
 	m.Sub.mu.Lock()
 	nc := m.Sub.conn
 	m.Sub.mu.Unlock()
@@ -4224,10 +4239,16 @@ func (nc *Conn) drainConnection() {
 
 	subs := make([]*Subscription, 0, len(nc.subs))
 	for _, s := range nc.subs {
+		if s == nc.respMux {
+			// Skip since might be in use while messages
+			// are being processed (can miss responses).
+			continue
+		}
 		subs = append(subs, s)
 	}
 	errCB := nc.Opts.AsyncErrorCB
 	drainWait := nc.Opts.DrainTimeout
+	respMux := nc.respMux
 	nc.mu.Unlock()
 
 	// for pushing errors with context.
@@ -4240,7 +4261,7 @@ func (nc *Conn) drainConnection() {
 		nc.mu.Unlock()
 	}
 
-	// Do subs first
+	// Do subs first, skip request handler if present.
 	for _, s := range subs {
 		if err := s.Drain(); err != nil {
 			// We will notify about these but continue.
@@ -4250,11 +4271,32 @@ func (nc *Conn) drainConnection() {
 
 	// Wait for the subscriptions to drop to zero.
 	timeout := time.Now().Add(drainWait)
+	var min int
+	if respMux != nil {
+		min = 1
+	} else {
+		min = 0
+	}
 	for time.Now().Before(timeout) {
-		if nc.NumSubscriptions() == 0 {
+		if nc.NumSubscriptions() == min {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+
+	// In case there was a request/response handler
+	// then need to call drain at the end.
+	if respMux != nil {
+		if err := respMux.Drain(); err != nil {
+			// We will notify about these but continue.
+			pushErr(err)
+		}
+		for time.Now().Before(timeout) {
+			if nc.NumSubscriptions() == 0 {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 
 	// Check if we timed out.
