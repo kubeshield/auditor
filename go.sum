@@ -934,8 +934,8 @@ k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89 h1:d4vVOjXm687F1iLSP2q3lyPPuyvTU
 k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 kmodules.xyz/client-go v0.0.0-20201105071625-0b277310b9b8 h1:zs2+yI/Ola5HjdtfP29XD76Bx5BO4WchC2uN9lkhxQM=
 kmodules.xyz/client-go v0.0.0-20201105071625-0b277310b9b8/go.mod h1:WXDwZBmvrcLgGcuO9iZpI9jcfPuDFfWbxA4EnhAFtGw=
-kmodules.xyz/client-go v0.0.0-20210213000708-f480974ce46d h1:Ezz+MeGDmvAZCpEURzyWHiZuIrRLATNk3Novwbn5ZuU=
-kmodules.xyz/client-go v0.0.0-20210213000708-f480974ce46d/go.mod h1:GdX1CHOpjL4F8P9O/7dE9m0fIOs05BNHKVT+kM51rk8=
+kmodules.xyz/client-go v0.0.0-20210218100652-8f345ddfe801 h1:2seQ02nLJpFdN2dLFy5WbCELalgYgpCqOHMBfDAChfA=
+kmodules.xyz/client-go v0.0.0-20210218100652-8f345ddfe801/go.mod h1:GdX1CHOpjL4F8P9O/7dE9m0fIOs05BNHKVT+kM51rk8=
 kmodules.xyz/openshift v0.0.0-20201105073146-0da509a7d39f/go.mod h1:vFwB/f5rVH5QoKXb/MN5xndDzYbmip2N8Zn68wgywlk=
 kmodules.xyz/webhook-runtime v0.0.0-20201105073856-2dc7382b88c6 h1:9+EIwxUrXrM8QD9rC1Fg+6CQK0vPniFO3ClaKih010M=
 kmodules.xyz/webhook-runtime v0.0.0-20201105073856-2dc7382b88c6/go.mod h1:xLgewoOzwR5ZrVOHQ2SR0P4E7tgCyBWbYlUawEXgeF4=
